@@ -7,7 +7,7 @@ set -Eeuo pipefail
 DEFAULT_TARGETS=("1.1.1.1" "8.8.8.8" "example.com")
 PING_COUNT="${PING_COUNT:-4}"     # antall ping
 PING_TIMEOUT="${PING_TIMEOUT:-2}" # sekunder per ping-svar
-STEP_TIMEOUT="${STEP_TIMEOUT:-25}"# maks tid per steg (s)
+STEP_TIMEOUT="${STEP_TIMEOUT:-25}" # maks tid per steg (s)
 
 LOG_DIR="${HOME}/.local/var/netdiag"
 mkdir -p "$LOG_DIR"
