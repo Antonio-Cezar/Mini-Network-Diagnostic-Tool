@@ -4,7 +4,7 @@ set -Eeuo pipefail
 # ─────────────  Config  ─────────────
 # Bruk: ./netdiag.sh [mål1 mål2 ...]
 # Hvis ingen mål gis, tester vi disse:
-DEFAULT_TARGETS=("1.1.1.1" "8.8.8.8" "example.com")
+DEFAULT_TARGETS=("1.1.1.1" "8.8.8.8" "google.com")
 PING_COUNT="${PING_COUNT:-4}"     # antall ping
 PING_TIMEOUT="${PING_TIMEOUT:-2}" # sekunder per ping-svar
 STEP_TIMEOUT="${STEP_TIMEOUT:-25}" # maks tid per steg (s)
