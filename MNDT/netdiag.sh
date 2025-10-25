@@ -95,12 +95,12 @@ run_step() {
   local rc=$?
   if [[ $rc -eq 124 || $rc -eq 137 ]]; then
     log "[TIMEOUT] $title etter ${STEP_TIMEOUT}s"
-  end
+  fi
   return "$rc"
 }
 
 # ─────────────  Start  ─────────────
-header
+header()
 
 # Check base tools
 missing=()
