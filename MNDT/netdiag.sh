@@ -3,11 +3,10 @@ set -Eeuo pipefail
 
 # ─────────────  Config  ─────────────
 # Usage: ./netdiag.sh [target1 target2 ...]
-# If no targets are provided, these are used:
 DEFAULT_TARGETS=("1.1.1.1" "8.8.8.8" "google.com")
-PING_COUNT="${PING_COUNT:-4}"      # pings per target
-PING_TIMEOUT="${PING_TIMEOUT:-2}"  # seconds per reply
-STEP_TIMEOUT="${STEP_TIMEOUT:-25}" # max seconds per step
+PING_COUNT="${PING_COUNT:-4}"
+PING_TIMEOUT="${PING_TIMEOUT:-2}"   # seconds per reply
+STEP_TIMEOUT="${STEP_TIMEOUT:-25}"  # max seconds per step
 
 LOG_DIR="${HOME}/.local/var/netdiag"
 mkdir -p "$LOG_DIR"
@@ -28,13 +27,12 @@ WARN="${YELLOW}ADVARSEL${RESET}"
 # ─────────────  Helpers  ─────────────
 have() { command -v "$1" >/dev/null 2>&1; }
 
-# LOG ONLY to file (keeps terminal clean)
+# Log only to file (keeps terminal clean)
 log() {
   printf '%s %s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$*" >> "$LOG_FILE"
 }
 
 header() {
-  # show header in terminal AND in log
   {
     echo "--------------------------------------------------"
     echo "Mini Network Diagnostic Tool"
@@ -75,7 +73,6 @@ dns_lookup() {
     return 127
   fi
 }
-# Make function visible to the timed subshell (used by run_step)
 export -f dns_lookup
 export -f have
 
@@ -86,7 +83,6 @@ run_step() {
 
   log "==> $title"
   if ! have timeout; then
-    # Run without timeout; log only
     "${cmdline[@]}" >>"$LOG_FILE" 2>&1
     return $?
   fi
@@ -100,7 +96,7 @@ run_step() {
 }
 
 # ─────────────  Start  ─────────────
-header()
+header
 
 # Check base tools
 missing=()
