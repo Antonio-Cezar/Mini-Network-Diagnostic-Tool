@@ -2,12 +2,12 @@
 set -Eeuo pipefail
 
 # ─────────────  Config  ─────────────
-# Bruk: ./netdiag.sh [mål1 mål2 ...]
-# Hvis ingen mål gis, tester vi disse:
+# Usage: ./netdiag.sh [target1 target2 ...]
+# If no targets are provided, these are used:
 DEFAULT_TARGETS=("1.1.1.1" "8.8.8.8" "google.com")
-PING_COUNT="${PING_COUNT:-4}"     # antall ping
-PING_TIMEOUT="${PING_TIMEOUT:-2}" # sekunder per ping-svar
-STEP_TIMEOUT="${STEP_TIMEOUT:-25}" # maks tid per steg (s)
+PING_COUNT="${PING_COUNT:-4}"      # pings per target
+PING_TIMEOUT="${PING_TIMEOUT:-2}"  # seconds per reply
+STEP_TIMEOUT="${STEP_TIMEOUT:-25}" # max seconds per step
 
 LOG_DIR="${HOME}/.local/var/netdiag"
 mkdir -p "$LOG_DIR"
@@ -28,16 +28,20 @@ WARN="${YELLOW}ADVARSEL${RESET}"
 # ─────────────  Helpers  ─────────────
 have() { command -v "$1" >/dev/null 2>&1; }
 
+# LOG ONLY to file (keeps terminal clean)
 log() {
-  printf '%s %s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$*" | tee -a "$LOG_FILE"
+  printf '%s %s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$*" >> "$LOG_FILE"
 }
 
 header() {
-  echo "--------------------------------------------------" | tee -a "$LOG_FILE"
-  echo "Mini Network Diagnostic Tool" | tee -a "$LOG_FILE"
-  echo "Tid (UTC): $(date -u +'%Y-%m-%dT%H:%M:%SZ')" | tee -a "$LOG_FILE"
-  echo "Logg: $LOG_FILE" | tee -a "$LOG_FILE"
-  echo "--------------------------------------------------" | tee -a "$LOG_FILE"
+  # show header in terminal AND in log
+  {
+    echo "--------------------------------------------------"
+    echo "Mini Network Diagnostic Tool"
+    echo "Tid (UTC): $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+    echo "Logg: $LOG_FILE"
+    echo "--------------------------------------------------"
+  } | tee -a "$LOG_FILE"
 }
 
 usage_deps() {
@@ -48,54 +52,57 @@ ${YELLOW}Mangler verktøy? Installer på Ubuntu/WSL:${RESET}
 EOF
 }
 
-# Velg traceroute-kommando (traceroute → tracepath)
+# Choose traceroute command (traceroute → tracepath)
 pick_tracer() {
   if have traceroute; then echo "traceroute -n -w 2 -q 1"; return 0; fi
   if have tracepath; then echo "tracepath -n"; return 0; fi
   return 1
 }
 
-# DNS-oppslag: nslookup → dig
+# DNS lookup: nslookup → dig
 dns_lookup() {
   local host="$1"
   if have nslookup; then
     nslookup "$host"
     return $?
   elif have dig; then
-    dig +short "$host"
-    # 'dig +short' returnerer 0 selv uten svar; sjekk output
-    [[ -n "$(dig +short "$host")" ]]
+    local out
+    out="$(dig +short "$host")"
+    echo "$out"
+    [[ -n "$out" ]]
     return $?
   else
     return 127
   fi
 }
+# Make function visible to the timed subshell (used by run_step)
+export -f dns_lookup
+export -f have
 
-# Kjør et steg med timeout og logg
+# Run a step with timeout and log details to file only
 run_step() {
   local title="$1"; shift
   local cmdline=("$@")
 
   log "==> $title"
   if ! have timeout; then
-    # 'timeout' finnes normalt i coreutils
-    log "[${WARN}] 'timeout' mangler – kjører uten tidsavbrudd."
-    "${cmdline[@]}" 2>&1 | tee -a "$LOG_FILE"
-    return "${PIPESTATUS[0]}"
+    # Run without timeout; log only
+    "${cmdline[@]}" >>"$LOG_FILE" 2>&1
+    return $?
   fi
 
-  timeout "${STEP_TIMEOUT}" bash -c 'exec "$@"' _ "${cmdline[@]}" 2>&1 | tee -a "$LOG_FILE"
-  local rc="${PIPESTATUS[0]}"
+  timeout "${STEP_TIMEOUT}" bash -c 'exec "$@"' _ "${cmdline[@]}" >>"$LOG_FILE" 2>&1
+  local rc=$?
   if [[ $rc -eq 124 || $rc -eq 137 ]]; then
-    log "[${FAIL}] Tidsavbrudd etter ${STEP_TIMEOUT}s"
-  fi
+    log "[TIMEOUT] $title etter ${STEP_TIMEOUT}s"
+  end
   return "$rc"
 }
 
 # ─────────────  Start  ─────────────
 header
 
-# Sjekk basisverktøy
+# Check base tools
 missing=()
 have ping || missing+=("ping (iputils-ping)")
 pick_tracer >/dev/null || missing+=("traceroute eller tracepath")
@@ -106,7 +113,7 @@ if ((${#missing[@]})); then
   usage_deps
 fi
 
-# Mål
+# Targets
 TARGETS=("$@")
 ((${#TARGETS[@]})) || TARGETS=("${DEFAULT_TARGETS[@]}")
 
@@ -169,7 +176,7 @@ for host in "${TARGETS[@]}"; do
   fi
 done
 
-# ─────────────  Sluttrapport  ─────────────
+# ─────────────  Summary  ─────────────
 echo
 echo "=================== RESULTAT ==================="
 printf '%-28s %-8s %-8s %-8s\n' "Mål" "PING" "TRACE" "DNS"
