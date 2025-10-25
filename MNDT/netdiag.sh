@@ -167,7 +167,7 @@ for host in "${TARGETS[@]}"; do
     echo "DNS : ${WARN} – verktøy ikke tilgjengelig"
     overall_ok=1
   fi
-done | sed 's/\x1B\[[0-9;]*[JKmsu]//g' >>"$LOG_FILE"  # ren logg uten farger
+done
 
 # ─────────────  Sluttrapport  ─────────────
 echo
