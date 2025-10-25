@@ -29,5 +29,4 @@ sudo apt install -y traceroute dnsutils iputils-ping coreutils
 ```
 
 ## Examples
-
 ![outpuy](/images/1.jpg)
